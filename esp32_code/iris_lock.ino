@@ -194,12 +194,3 @@ void denyAccess() {
   digitalWrite(LED_PIN, LOW);
 }
 ```
-
----
-
-## FILE 3 — Create file named: `requirements.txt`
-```
-opencv-python
-tensorflow
-flask
-numpy
