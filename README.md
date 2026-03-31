@@ -1,140 +1,114 @@
 # 👁️ Iris Based Locking System
 
-> A biometric authentication system using unique iris patterns to control a physical servo-based lock — built with **ESP32**, **Python**, **OpenCV**, **TensorFlow**, and **Flask**.
+> A biometric door lock system using iris recognition — built with **ESP32**, **Python (OpenCV + TensorFlow + Flask)**, controlled via Wi-Fi.  
+> Mini Project | ECE Department | BITM Ballari | VTU 2024–25
 
 ---
 
 ## 📌 Table of Contents
 - [Overview](#overview)
-- [Features](#features)
+- [How It Works](#how-it-works)
 - [Tech Stack](#tech-stack)
 - [Hardware Components](#hardware-components)
 - [Hardware Wiring](#hardware-wiring)
-- [System Architecture](#system-architecture)
 - [Project Structure](#project-structure)
-- [Installation & Setup](#installation--setup)
-- [How It Works](#how-it-works)
+- [Setup Instructions](#setup-instructions)
 - [Results](#results)
-- [Limitations](#limitations)
-- [Future Scope](#future-scope)
+- [Limitations & Future Scope](#limitations--future-scope)
 - [Team](#team)
 
 ---
 
 ## 🔍 Overview
 
-The **Iris Based Locking System** is a mini-project developed for the Bachelor of Engineering (ECE) program at **Ballari Institute of Technology & Management**, under **Visvesvaraya Technological University (VTU)**.
+Traditional security methods like passwords, PINs, and keys can be stolen, guessed, or lost. This project replaces them with **iris biometric authentication**.
 
-Traditional security methods like passwords, PINs, and keys are vulnerable to theft or duplication. This project replaces them with **iris biometric authentication** — leveraging the fact that every individual's iris pattern is **unique and stable throughout their lifetime**.
-
-The system:
-1. Captures a live iris image via webcam
-2. Processes it using **OpenCV** (segmentation, normalization)
-3. Matches it against enrolled templates using a **TensorFlow CNN model**
-4. Communicates the result to an **ESP32** over **Wi-Fi**
-5. **ESP32** actuates a **servo motor** to unlock the door, or lights an LED for denial
+Every person's iris has a unique pattern that stays the same throughout their life. Our system:
+- Stores reference iris images in a folder on the laptop
+- Takes a new photo via mobile phone camera
+- Compares it using **OpenCV + TensorFlow** running on the laptop
+- Sends the result to **ESP32** over Wi-Fi
+- ESP32 **unlocks the door** (servo motor) or **glows LED** for denial
 
 ---
 
-## ✨ Features
+## 🔄 How It Works
 
-| Feature | Details |
-|--------|---------|
-| 🔐 Biometric Security | Unique iris pattern for each user |
-| 📡 Wireless Control | ESP32 communicates with Flask server over Wi-Fi |
-| 🧠 Deep Learning | TensorFlow CNN extracts 128-D iris embeddings |
-| 🔒 Physical Lock | Servo motor controls door lock mechanism |
-| 💡 LED Feedback | Indicates access granted or denied |
-| 🌐 Web Interface | Flask UI for enrollment and authentication |
-| 🔘 Push Button | Long press triggers iris scan from hardware side |
-| 👁 Contactless | No touch required — hygienic and convenient |
+```
+1. Iris images of authorized users are saved in the iris_images/ folder
+
+2. Python (main.py) starts a Flask server on the laptop
+
+3. User presses and holds the push button on the ESP32 circuit
+
+4. ESP32 connects to Flask server over Wi-Fi and requests authentication
+
+5. Mobile phone camera captures the user's eye and sends the photo to Flask
+
+6. Flask processes the image:
+      OpenCV  → grayscale, blur, eye detection, crop, normalize
+      TensorFlow CNN → extracts 128-D feature vector
+      Cosine similarity → compares with all stored iris images
+
+7. If similarity ≥ 0.80 → GRANTED
+      ESP32 rotates servo motor to 90° → Door opens for 5 seconds → Locks again
+
+8. If similarity < 0.80 → DENIED
+      ESP32 turns on LED for 3 seconds
+```
 
 ---
 
 ## 🛠️ Tech Stack
 
-### Software
-| Tool | Purpose |
-|------|---------|
-| Python 3.8+ | Core application logic |
-| OpenCV (`opencv-python`) | Iris image capture & preprocessing |
-| TensorFlow / Keras | CNN model for feature extraction & matching |
-| Flask | Web server — bridges ESP32 ↔ Python |
-| PyCharm | Python IDE |
-| Arduino IDE 2.3.4 | ESP32 firmware programming |
-
-### ESP32 Libraries
+### Python (all in one file — `main.py`)
 | Library | Purpose |
 |---------|---------|
-| `WiFi.h` | Wi-Fi connectivity |
-| `HTTPClient.h` | Send HTTP GET to Flask server |
-| `ESP32Servo.h` | Control servo motor |
+| `opencv-python` | Image preprocessing — grayscale, blur, eye detection, crop |
+| `tensorflow` / `keras` | CNN model to extract iris feature vectors |
+| `flask` | Web server — receives images, sends grant/deny response |
+| `numpy` | Array operations and cosine similarity calculation |
+
+### ESP32 (Arduino IDE)
+| Library | Purpose |
+|---------|---------|
+| `WiFi.h` | Connect ESP32 to Wi-Fi |
+| `HTTPClient.h` | Send HTTP request to Flask server on laptop |
+| `ESP32Servo.h` | Control servo motor for lock/unlock |
 
 ---
 
 ## 🔧 Hardware Components
 
-| Component | Qty | Purpose |
-|-----------|-----|---------|
-| ESP32-WROOM-32D | 1 | Main microcontroller with Wi-Fi |
-| Servo Motor (SG90 / MG90S) | 1 | Lock/unlock mechanism |
-| LED (Red) | 1 | Denial indicator |
-| Push Button | 1 | Trigger iris scan |
-| Resistor (10kΩ) | 1 | Pull-down for push button |
-| Breadboard | 1 | Prototyping |
-| Jumper Wires | — | Connections |
-| USB Cable | 1 | Power + programming ESP32 |
-| Webcam / Laptop Camera | 1 | Iris capture |
+| Component | Purpose |
+|-----------|---------|
+| ESP32-WROOM-32D | Main microcontroller — Wi-Fi + controls all components |
+| Servo Motor (SG90) | Physically rotates to lock / unlock the door |
+| LED | Glows red when access is denied |
+| Push Button | Long press triggers the authentication process |
+| Resistor (10kΩ) | Pull-down for push button (avoids random triggers) |
+| Breadboard | Circuit prototyping |
+| Jumper Wires | Connections between components |
+| Laptop / PC | Runs Python (main.py) + Flask server |
+| Mobile Phone | Camera used to capture iris photo |
 
 ---
 
 ## 🔌 Hardware Wiring
 
 ```
-ESP32-WROOM-32D Pin Connections:
+ESP32-WROOM-32D Connections:
 
-┌──────────────┬─────────────────────────────┐
-│  ESP32 Pin   │  Connected To               │
-├──────────────┼─────────────────────────────┤
-│  D12         │  LED Anode (+)              │
-│  GND         │  LED Cathode (−)            │
-│  D14         │  Servo Signal (Yellow/White)│
-│  GND         │  Servo Ground (Brown/Black) │
-│  5V (VIN)    │  Servo Power (Red)          │
-│  3.3V        │  Push Button (one terminal) │
-│  D15         │  Push Button + Resistor     │
-│  GND         │  Resistor other end         │
-└──────────────┴─────────────────────────────┘
-```
+  D12   ──────────── LED (Anode / +)
+  GND   ──────────── LED (Cathode / −)
 
-> 💡 Make sure ESP32 and the PC running Flask are on the **same Wi-Fi network**.
+  D14   ──────────── Servo Motor (Signal / Yellow wire)
+  GND   ──────────── Servo Motor (Ground / Brown wire)
+  5V    ──────────── Servo Motor (Power / Red wire)
 
----
-
-## 🏗️ System Architecture
-
-```
-[Webcam / Camera]
-       │
-       ▼
-[Python + OpenCV]         ← Captures & preprocesses iris image
-       │
-       ▼
-[TensorFlow CNN Model]    ← Extracts 128-D feature embedding
-       │
-       ▼
-[Cosine Similarity Match] ← Compares with enrolled templates
-       │
-       ▼
-[Flask Web Server]        ← Sends HTTP response (granted/denied)
-       │  (Wi-Fi)
-       ▼
-[ESP32-WROOM-32D]         ← Receives response
-       │
-  ┌────┴────┐
-  ▼         ▼
-[Servo]   [LED]
-(UNLOCK)  (DENY)
+  3.3V  ──────────── Push Button (one terminal)
+  D15   ──────────── Push Button (other terminal) + Resistor
+  GND   ──────────── Resistor (other end)
 ```
 
 ---
@@ -144,141 +118,97 @@ ESP32-WROOM-32D Pin Connections:
 ```
 iris-locking-system/
 │
-├── server/
-│   ├── app.py                  # Flask web server (main entry point)
-│   ├── iris_processing.py      # OpenCV iris detection & preprocessing
-│   ├── iris_model.py           # TensorFlow CNN model definition & matching
-│   ├── enroll_iris.py          # Script to enroll a new user
-│   ├── iris_model.h5           # (Generated after training)
-│   ├── enrolled_iris/          # Stored iris feature templates (.npy files)
-│   └── templates/
-│       └── index.html          # Web UI for enrollment & authentication
+├── main.py                  ← All Python code in ONE file
+│                              (OpenCV + TensorFlow + Flask)
+│
+├── iris_images/             ← Folder with saved iris images
+│   ├── person1.jpg          ← Enrolled iris photo
+│   └── person2.jpg
 │
 ├── esp32_code/
-│   └── iris_lock.ino           # Arduino firmware for ESP32
+│   └── iris_lock.ino        ← Arduino code for ESP32
 │
-├── requirements.txt            # Python dependencies
+├── requirements.txt         ← Python libraries to install
 └── README.md
 ```
 
 ---
 
-## ⚙️ Installation & Setup
+## ⚙️ Setup Instructions
 
-### Prerequisites
-- Python 3.8 or higher
-- Arduino IDE 2.3.4 with ESP32 board support
-- A webcam (built-in or external)
-- ESP32 and ESP32Servo library installed in Arduino IDE
-
----
-
-### Step 1: Clone the Repository
+### Step 1: Install Python Libraries
 ```bash
-git clone https://github.com/YOUR_USERNAME/iris-locking-system.git
-cd iris-locking-system
+pip install opencv-python tensorflow flask numpy
 ```
 
-### Step 2: Install Python Dependencies
+### Step 2: Add Iris Images
+- Take clear close-up photos of the eye (good lighting)
+- Save them in the `iris_images/` folder
+- Name the file with the person's name, e.g., `afghan.jpg`, `anusha.jpg`
+
+### Step 3: Run the Python Server
 ```bash
-pip install -r requirements.txt
+python main.py
 ```
-
-### Step 3: Enroll a User
-```bash
-cd server
-
-# From camera:
-python enroll_iris.py --name YourName
-
-# From an image file:
-python enroll_iris.py --name YourName --image path/to/eye_photo.jpg
-
-# List enrolled users:
-python enroll_iris.py --list
+You will see output like:
 ```
-
-### Step 4: Run the Flask Server
-```bash
-python app.py
+[INFO] Loaded enrolled iris: afghan
+[INFO] 1 user(s) enrolled.
+[INFO] Starting Flask server...
+ * Running on http://0.0.0.0:5000
 ```
-> Note the URL shown — e.g., `http://192.168.1.100:5000`  
-> Copy this URL — you'll paste it into the ESP32 code.
+> Note your laptop's IP address (e.g., `192.168.43.100`)
 
-### Step 5: Flash the ESP32
+### Step 4: Flash the ESP32
+1. Open `esp32_code/iris_lock.ino` in **Arduino IDE 2.3.4**
+2. Edit these 3 lines:
+```cpp
+const char* ssid     = "YOUR_WIFI_NAME";
+const char* password = "YOUR_WIFI_PASSWORD";
+const char* serverURL = "http://192.168.43.100:5000/authenticate";
+```
+3. Connect ESP32 to laptop via USB
+4. Select **Board**: `ESP32 Dev Module` and correct **Port**
+5. Click **Upload**
+6. Press **RESET** button on ESP32
 
-1. Open `esp32_code/iris_lock.ino` in Arduino IDE
-2. Edit these lines:
-   ```cpp
-   const char* ssid     = "YOUR_WIFI_SSID";
-   const char* password = "YOUR_WIFI_PASSWORD";
-   const char* serverURL = "http://192.168.1.100:5000/capture";  // Flask URL
-   ```
-3. Connect ESP32 via USB → Select board `ESP32 Dev Module` and correct COM port
-4. Click **Upload**
-5. Press **RESET** button on ESP32
+> ⚠️ Make sure your laptop and ESP32 are on the **same Wi-Fi / mobile hotspot**
 
-### Step 6: Test the System
-
-- Long press the push button on the hardware
-- The ESP32 sends a request to Flask
-- Flask activates the webcam, captures your iris, and returns granted/denied
-- **Match** → Servo unlocks door for 5 seconds ✅
-- **No Match** → LED glows red for 3 seconds ❌
-
----
-
-## 🔄 How It Works
-
-### Enrollment
-1. User runs `enroll_iris.py`
-2. Webcam captures eye image
-3. OpenCV detects the iris region using Haar cascade + HoughCircles
-4. Image is resized to 128×128 and normalized
-5. TensorFlow CNN extracts a 128-dimensional feature vector
-6. Feature vector is saved as `enrolled_iris/<name>.npy`
-
-### Authentication
-1. ESP32 push button triggers an HTTP GET to `/capture`
-2. Flask activates the webcam and captures a live image
-3. OpenCV preprocesses the iris (same pipeline as enrollment)
-4. CNN extracts features from the live iris
-5. Cosine similarity is computed against all enrolled users
-6. If similarity ≥ 0.85 → `granted`, else → `denied`
-7. Response is sent back to ESP32 as JSON
-8. ESP32 actuates servo (unlock) or LED (denial) accordingly
+### Step 5: Test
+1. Long press the push button (hold for 1.5 seconds)
+2. Take a photo of the eye using mobile phone and send to Flask
+3. **Match** → Servo rotates to 90° → Door unlocks for 5 seconds ✅
+4. **No match** → LED glows red for 3 seconds ❌
 
 ---
 
 ## 📊 Results
 
-- ✅ Registered users authenticated successfully with high similarity scores
-- ✅ Unregistered users correctly rejected
-- ✅ Servo motor correctly unlocks and re-locks after 5 seconds
-- ✅ LED indicator works for all denial cases
-- ✅ Wi-Fi communication between ESP32 and Flask confirmed stable
-- ✅ End-to-end scan-to-result in under 3 seconds
+- ✅ Enrolled iris images loaded and processed successfully
+- ✅ Mobile phone camera used to capture live iris photo
+- ✅ OpenCV correctly detected and cropped eye region
+- ✅ TensorFlow CNN extracted feature vectors for comparison
+- ✅ Cosine similarity matching worked for registered users
+- ✅ Servo motor unlocked correctly on successful match
+- ✅ LED indicated denial for unrecognized iris
+- ✅ Wi-Fi communication between laptop (Flask) and ESP32 confirmed
 
 ---
 
-## ⚠️ Limitations
+## ⚠️ Limitations & Future Scope
 
-- Higher initial cost compared to PIN-based systems
-- Accuracy may drop under poor lighting or extreme angles
-- Users with glasses, cataracts, or eye injuries may face issues
-- Potential spoofing using high-resolution iris photos
-- Managing large databases of users may require a proper DB backend
+### Current Limitations
+- Mobile phone must manually send image to Flask server
+- System may struggle with very poor lighting conditions
+- No liveness detection (could potentially be fooled by a photo)
+- Only tested with a small number of enrolled users
 
----
-
-## 🚀 Future Scope
-
-- Integrate **cloud database** (Firebase / AWS) for scalable user management
-- Add **anti-spoofing** using liveness detection (blink detection, etc.)
-- Combine with **facial recognition** for multi-modal biometrics
-- Build a **mobile app** for remote monitoring and access logs
-- Integrate with **IoT smart home** platforms (Home Assistant, etc.)
-- Use a **dedicated IR camera** for better iris imaging under all lighting
+### Future Scope
+- Add dedicated IR camera for better iris imaging in all lighting
+- Implement liveness detection (blink detection) to prevent spoofing
+- Build a mobile app for easier image capture and sending
+- Add cloud database for managing many users
+- Combine with face recognition for multi-modal security
 
 ---
 
@@ -294,12 +224,10 @@ python app.py
 **Guide:** Dr. Abdul Lateef Haroon P S *(Associate Professor)*  
 **Department:** Electronics & Communication Engineering  
 **Institution:** Ballari Institute of Technology & Management, Ballari  
-**University:** Visvesvaraya Technological University, Belagavi  
+**University:** Visvesvaraya Technological University (VTU), Belagavi  
 **Academic Year:** 2024–2025
 
 ---
 
 ## 📄 License
-
-This project was developed for academic purposes under VTU.  
-For collaboration or usage, please contact the authors.
+Developed for academic purposes under VTU. For queries, contact the authors.
